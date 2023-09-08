@@ -4,7 +4,7 @@ import torch.optim as optim
 import numpy as np
 import os
 from torch.utils.data import DataLoader
-from net_model import ST_Module
+from diff_model import STD_Module
 
 # 定义超参数
 batch_size = 16
@@ -32,7 +32,7 @@ if os.path.exists(model_path):
     print("已加载已有的模型。")
 else:
     # 创建模型
-    model = ST_Module(c, 2*c, t, st_blocks=3) # num_time的意义是时间编码)
+    model = STD_Module(c, 2*c, t, st_blocks=3) # num_time的意义是时间编码)
     print("已创建新的模型。")
 
 # 定义损失函数和优化器
@@ -47,7 +47,7 @@ for epoch in range(num_epochs):
     for batch_data in train_loader:
         inputs = batch_data[0]  # 获取输入数据
         optimizer.zero_grad()
-        outputs = model(inputs, adj)
+        outputs = model(inputs, adj, 1)
         loss = criterion(outputs, inputs)  # 使用均方误差计算损失
         loss.backward()
         optimizer.step()
