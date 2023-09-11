@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Sep  8 11:18:36 2023
-
-@author: dell
-"""
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,7 +5,7 @@ from diff_model import STD_Module
 
 
 class PriSTI(nn.Module):
-    def __init__(self, target_dim, hidden_dim, seq_len, config, device):
+    def __init__(self, target_dim, seq_len, config, device):
         super().__init__()
         self.device = device
         self.target_dim = target_dim
@@ -35,8 +28,8 @@ class PriSTI(nn.Module):
         config_diff["device"] = device
         self.device = device
 
-        input_dim = target_dim
-        self.diffmodel = STD_Module(input_dim, hidden_dim, seq_len, st_blocks=3)
+        input_dim = 2
+        self.diffmodel = STD_Module(input_dim=input_dim, hidden_dim=16*2, seq_len=24, st_blocks=3, diff_steps=1000, device=device)
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
@@ -78,18 +71,18 @@ class PriSTI(nn.Module):
         return side_info
 
     def calc_loss_valid(
-        self, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train
+        self, adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train
     ):
         loss_sum = 0
         for t in range(self.num_steps):  # calculate loss for all t
             loss = self.calc_loss(
-                observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=t
+                adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=t
             )
             loss_sum += loss.detach()
         return loss_sum / self.num_steps
 
     def calc_loss(
-        self, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=-1
+        self, adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=-1
     ):
         B, K, L = observed_data.shape
         if is_train != 1:  # for validation
@@ -102,8 +95,9 @@ class PriSTI(nn.Module):
         total_input = self.set_input_to_diffmodel(noisy_data, observed_data, cond_mask)
         if not self.use_guide:
             itp_info = cond_mask * observed_data
-        predicted = self.diffmodel(total_input, side_info, t, itp_info, cond_mask)
-
+        # predicted = self.diffmodel(total_input, side_info, t, itp_info, cond_mask)
+        """魔改了，迟早改回来"""
+        predicted = self.diffmodel(x=total_input, adj=adj, diff_t=t)
         target_mask = observed_mask - cond_mask
         residual = (noise - predicted) * target_mask
         num_eval = target_mask.sum()
@@ -166,7 +160,7 @@ class PriSTI(nn.Module):
             imputed_samples[:, i] = current_sample.detach()
         return imputed_samples
 
-    def forward(self, batch, is_train=1):
+    def forward(self, adj, batch, is_train=1):
         (
             observed_data,
             observed_mask,
@@ -184,7 +178,7 @@ class PriSTI(nn.Module):
             itp_info = coeffs.unsqueeze(1)
 
         loss_func = self.calc_loss if is_train == 1 else self.calc_loss_valid
-        output = loss_func(observed_data, cond_mask, observed_mask, side_info, itp_info, is_train)
+        output = loss_func(adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train)
         return output
 
     def evaluate(self, batch, n_samples):

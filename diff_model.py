@@ -10,7 +10,7 @@ import torch.nn as nn
 from layers import GAT, CT_MSA, DiffusionEmbedding
 
 class STD_Module(nn.Module):
-    def __init__(self, input_dim, hidden_dim, seq_len, st_blocks, diff_steps=1000):
+    def __init__(self, input_dim, hidden_dim, seq_len, st_blocks, diff_steps=1000, device=None):
         super(STD_Module, self).__init__()
       
         self.input_dim = input_dim
@@ -27,8 +27,9 @@ class STD_Module(nn.Module):
       
         for b in range(self.st_blocks):
             window_size = self.seq_len // 2 ** (self.st_blocks - b - 1) # 时间因果卷积窗口
-            self.t_modules.append(CT_MSA(n_feat=self.input_dim, window_size=window_size, num_time=self.seq_len)) 
-            self.s_modules.append(GAT(n_feat=self.input_dim, n_hid=self.hidden_dim))
+            self.t_modules.append(CT_MSA(n_feat=self.input_dim, window_size=window_size, num_time=self.seq_len, device=device)) 
+            """魔改, 看来是没对接好"""
+            self.s_modules.append(GAT(n_feat=self.hidden_dim, n_hid=self.hidden_dim))
             self.bn.append(nn.BatchNorm2d(self.input_dim))
             
     def forward(self, x, adj, diff_t):

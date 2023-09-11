@@ -16,7 +16,7 @@ class GAT(nn.Module):
         super(GAT, self).__init__()
         n_out = n_feat
         self.dropout = dropout
-        self.attentions = [GraphAttentionLayer(n_feat, n_hid, dropout=dropout, alpha=alpha, concat=True) for _ in range(n_heads)]
+        self.attentions = [GraphAttentionLayer(in_features=n_feat, out_features=n_hid, dropout=dropout, alpha=alpha, concat=True) for _ in range(n_heads)]
         for i, attention in enumerate(self.attentions):
             self.add_module('attention_{}'.format(i), attention)
         self.out_att = GraphAttentionLayer(n_hid * n_heads, n_out, dropout=dropout,alpha=alpha, concat=False)
@@ -65,6 +65,7 @@ class GraphAttentionLayer(nn.Module):
         inp: input_fea [B, N, in_features]  in_features表示节点的输入特征向量元素个数
         adj: 图的邻接矩阵  [N, N] 非零即一，数据结构基本知识
         """
+        # print(self.W.shape, inp.shape)
         h = torch.matmul(inp, self.W)   # [B, N, out_features] 
         N = h.size()[1]    # N 图的节点数
         a_input = torch.cat([h.repeat(1,1,N).view(-1, N*N, self.out_features), h.repeat(1, N, 1)], dim=-1)
@@ -99,7 +100,8 @@ class CT_MSA(nn.Module):
         super().__init__()
         
         n_hid = n_feat
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_time, n_hid))
+        """魔改了"""
+        self.pos_embedding = nn.Parameter(torch.randn(1, 36, 32))
         self.layers = nn.ModuleList([])
         for i in range(depth):
             self.layers.append(nn.ModuleList([
@@ -110,6 +112,7 @@ class CT_MSA(nn.Module):
         # x: [b, c, n, t]
         b, c, n, t = x.shape
         x = x.permute(0, 2, 3, 1).reshape(b*n, t, c)  # [b*n, t, c]
+        # print(x.shape, self.pos_embedding.shape)
         x = x + self.pos_embedding  # [b*n, t, c]
         for attn, ff in self.layers:
             x = attn(x) + x
