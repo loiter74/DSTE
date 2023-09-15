@@ -24,8 +24,7 @@ def train(
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
             optimizer, milestones=[p1, p2], gamma=0.1
         )
-    '''魔改的'''
-    adj = torch.ones(36, 36, device="cuda:0")  # 将数据移动到GPU上
+
     valid_epoch_interval = config["valid_epoch_interval"]
     best_valid_loss = 1e10
 
@@ -35,7 +34,7 @@ def train(
         with tqdm(train_loader, mininterval=5.0, maxinterval=50.0) as it:
             for batch_no, train_batch in enumerate(it, start=1):
                 optimizer.zero_grad()
-                loss = model(adj, train_batch)
+                loss = model(train_batch)
                 loss.backward()
                 avg_loss += loss.item()
                 optimizer.step()
