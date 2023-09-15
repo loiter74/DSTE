@@ -8,7 +8,7 @@ from utils import get_randmask, get_hist_mask
 
 
 class AQI36_Dataset(Dataset):
-    def __init__(self, eval_length=36, target_dim=36, mode="train", val_len=0.1, is_interpolate=False,
+    def __init__(self, eval_length=24, target_dim=36, mode="train", val_len=0.1, is_interpolate=False,
                  target_strategy='hybrid', mask_sensor=None, missing_ratio=None):
         self.eval_length = eval_length
         self.target_dim = target_dim
@@ -41,6 +41,11 @@ class AQI36_Dataset(Dataset):
         self.use_index = []  # to separate train/valid/test
         self.cut_length = []  # excluded from evaluation targets
 
+        self.observed_mask_sf = [] # 添加
+        self.observed_data_sf = []
+        self.observed_mask_gt_sf = []
+        self.observed_data_gt_sf = []
+
         df = pd.read_csv(
             "./data/pm25/SampleData/pm25_ground.txt",
             index_col="datetime",
@@ -51,18 +56,34 @@ class AQI36_Dataset(Dataset):
             index_col="datetime",
             parse_dates=True,
         )
+        df_sf = pd.read_csv(
+            "./data/pm25/SampleData/pm25_ground_shuffled.txt",
+            index_col="datetime",
+            parse_dates=True,
+        )
+        df_gt_sf = pd.read_csv(
+            "./data/pm25/SampleData/pm25_missing_shuffled.txt",
+            index_col="datetime",
+            parse_dates=True,
+        )
 
         for i in range(len(month_list)):
             current_df = df[df.index.month == month_list[i]]
             current_df_gt = df_gt[df_gt.index.month == month_list[i]]
+            current_df_sf = df_sf[df_sf.index.month == month_list[i]] # 添加
+            current_df_gt_sf = df_gt_sf[df_gt_sf.index.month == month_list[i]] # 添加
             if mode == 'train' and month_list[i] in [2, 5, 8, 11]:
                 cut_len = int(val_len * len(current_df))
                 current_df = current_df[:-cut_len]
                 current_df_gt = current_df_gt[:-cut_len]
+                current_df_sf = current_df_sf[:-cut_len] # 添加
+                current_df_gt_sf = current_df_gt_sf[:-cut_len] # 添加
             if mode == 'valid':
                 cut_len = int(val_len * len(current_df))
                 current_df = current_df[-cut_len:]
                 current_df_gt = current_df_gt[-cut_len:]
+                current_df_sf = current_df_sf[-cut_len:] # 添加
+                current_df_gt_sf = current_df_gt_sf[-cut_len:] # 添加
             current_length = len(current_df) - eval_length + 1
 
             last_index = len(self.index_month)
@@ -76,6 +97,9 @@ class AQI36_Dataset(Dataset):
             # mask values for observed indices are 1
             c_mask = 1 - current_df.isnull().values
             c_gt_mask = 1 - current_df_gt.isnull().values
+            c_sf_mask = 1 - current_df_sf.isnull().values # 添加
+            c_gt_sf_mask = 1 - current_df_gt_sf.isnull().values # 添加
+            
             if len(self.mask_sensor) > 0:
                 for sensor in self.mask_sensor:
                     c_gt_mask[:, sensor] = 0
@@ -85,10 +109,22 @@ class AQI36_Dataset(Dataset):
             c_data = (
                 (current_df.fillna(0).values - self.train_mean) / self.train_std
             ) * c_mask
+            c_data_sf = (
+                (current_df_sf.fillna(0).values - self.train_mean) / self.train_std
+            ) * c_sf_mask # 添加
+            c_data_gt_sf = (
+                (current_df_gt_sf.fillna(0).values - self.train_mean) / self.train_std
+            ) * c_gt_sf_mask # 添加
+            
             self.observed_mask.append(c_mask)
             self.gt_mask.append(c_gt_mask)
             self.observed_data.append(c_data)
-
+            
+            self.observed_mask_sf.append(c_sf_mask) # 添加
+            self.observed_data_sf.append(c_data_sf)
+            self.observed_mask_gt_sf.append(c_gt_sf_mask) # 添加
+            self.observed_data_gt_sf.append(c_data_gt_sf)
+            
             if mode == "test":
                 n_sample = len(current_df) // eval_length
                 # interval size is eval_length (missing values are imputed only once)
@@ -136,6 +172,13 @@ class AQI36_Dataset(Dataset):
         index2 = np.random.randint(0, len(self.use_index))
         hist_month = self.index_month_histmask[index2]
         hist_index = self.position_in_month_histmask[index2]
+        # 添加
+        sf_data = self.observed_data_sf[c_month][c_index:c_index + self.eval_length]        
+        sf_mask = self.observed_mask_sf[c_month][c_index:c_index + self.eval_length]
+        
+        # 添加
+        gt_sf_data = self.observed_data_gt_sf[c_month][c_index:c_index + self.eval_length]        
+        gt_sf_mask = self.observed_mask_gt_sf[c_month][c_index:c_index + self.eval_length]
 
         ob_data = self.observed_data[c_month][c_index:c_index + self.eval_length]
         ob_mask = self.observed_mask[c_month][c_index:c_index + self.eval_length]
@@ -158,7 +201,12 @@ class AQI36_Dataset(Dataset):
             "hist_mask": for_pattern_mask,
             "timepoints": np.arange(self.eval_length),
             "cut_length": self.cut_length[org_index],
-            "cond_mask": cond_mask.numpy()
+            "cond_mask": cond_mask.numpy(),
+            
+            "shuffled_data": sf_data,
+            "shuffled_mask": sf_mask,
+            "missing_shuffled_data": gt_sf_data,
+            "missing_shuffled_mask": gt_sf_mask,
         }
         if self.is_interpolate:
             tmp_data = torch.tensor(ob_data).to(torch.float64)
@@ -172,7 +220,7 @@ class AQI36_Dataset(Dataset):
         return len(self.use_index)
 
 
-def get_dataloader(batch_size, device, val_len=0.1, is_interpolate=False, num_workers=4, target_strategy='hybrid', mask_sensor=None):
+def get_dataloader(batch_size, device, val_len=0.1, is_interpolate=False, num_workers=4, target_strategy='hybrid', mask_sensor=[[]]):
     dataset = AQI36_Dataset(mode="train", is_interpolate=is_interpolate, target_strategy=target_strategy, mask_sensor=mask_sensor)
     train_loader = DataLoader(
         dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True
@@ -191,3 +239,9 @@ def get_dataloader(batch_size, device, val_len=0.1, is_interpolate=False, num_wo
 
     return train_loader, valid_loader, test_loader, scaler, mean_scaler
 
+if __name__ == "__main__":
+    train_loader, valid_loader, test_loader, scaler, mean_scaler = get_dataloader(3, device='cpu')
+    for batch_no in train_loader:
+        for key, val in batch_no.items():
+            print(val.shape, key)
+        break

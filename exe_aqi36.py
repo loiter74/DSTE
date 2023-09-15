@@ -72,7 +72,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="PriSTI")
     parser.add_argument("--config", type=str, default="base.yaml")
-    parser.add_argument('--device', default='cuda:0', help='Device for Attack')
+    parser.add_argument('--device', default='cpu', help='Device for Attack')
     parser.add_argument('--num_workers', type=int, default=12, help='Device for Attack')
     parser.add_argument("--modelfolder", type=str, default="")
     parser.add_argument(

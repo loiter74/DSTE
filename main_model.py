@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from diff_model import STD_Module
+from diff_models import Guide_diff
 
 
 class PriSTI(nn.Module):
@@ -18,10 +18,13 @@ class PriSTI(nn.Module):
         self.use_guide = config["model"]["use_guide"]
 
         self.cde_output_channels = config["diffusion"]["channels"]
-        self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim
+        
+        self.side_feature_dim = self.emb_feature_dim
+        self.emb_total_dim = self.emb_time_dim + self.emb_feature_dim + self.side_feature_dim
         self.embed_layer = nn.Embedding(
             num_embeddings=self.target_dim, embedding_dim=self.emb_feature_dim
         )
+        self.conv = torch.nn.Conv2d(1, self.side_feature_dim, kernel_size=3, padding=1)  # 以卷积层为例，可以根据你的需求替换为其他层
 
         config_diff = config["diffusion"]
         config_diff["side_dim"] = self.emb_total_dim
@@ -29,7 +32,7 @@ class PriSTI(nn.Module):
         self.device = device
 
         input_dim = 2
-        self.diffmodel = STD_Module(input_dim=input_dim, hidden_dim=16*2, seq_len=24, st_blocks=3, diff_steps=1000, device=device)
+        self.diffmodel = Guide_diff(config_diff, input_dim, target_dim, self.use_guide)
 
         # parameters for diffusion models
         self.num_steps = config_diff["num_steps"]
@@ -56,9 +59,8 @@ class PriSTI(nn.Module):
         pe[:, :, 1::2] = torch.cos(position * div_term)
         return pe
 
-    def get_side_info(self, observed_tp, cond_mask):
+    def get_side_info(self, observed_tp, cond_mask, shuffled_data, shuffled_mask):
         B, K, L = cond_mask.shape
-
         time_embed = self.time_embedding(observed_tp, self.emb_time_dim)  # (B,L,emb)
         time_embed = time_embed.unsqueeze(2).expand(-1, -1, K, -1)
         feature_embed = self.embed_layer(
@@ -66,23 +68,28 @@ class PriSTI(nn.Module):
         )  # (K,emb)
         feature_embed = feature_embed.unsqueeze(0).unsqueeze(0).expand(B, L, -1, -1)
         side_info = torch.cat([time_embed, feature_embed], dim=-1)  # (B,L,K,*)
+     
         side_info = side_info.permute(0, 3, 2, 1)  # (B,*,K,L)
-
+        
+        shuffled_data = shuffled_data.unsqueeze(1)
+        
+        shuffled_data = self.conv(shuffled_data)
+        side_info = torch.cat([side_info, shuffled_data], dim=1) 
         return side_info
 
     def calc_loss_valid(
-        self, adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train
+        self, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train
     ):
         loss_sum = 0
         for t in range(self.num_steps):  # calculate loss for all t
             loss = self.calc_loss(
-                adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=t
+                observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=t
             )
             loss_sum += loss.detach()
         return loss_sum / self.num_steps
 
     def calc_loss(
-        self, adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=-1
+        self, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train, set_t=-1
     ):
         B, K, L = observed_data.shape
         if is_train != 1:  # for validation
@@ -95,9 +102,8 @@ class PriSTI(nn.Module):
         total_input = self.set_input_to_diffmodel(noisy_data, observed_data, cond_mask)
         if not self.use_guide:
             itp_info = cond_mask * observed_data
-        # predicted = self.diffmodel(total_input, side_info, t, itp_info, cond_mask)
-        """魔改了，迟早改回来"""
-        predicted = self.diffmodel(x=total_input, adj=adj, diff_t=t)
+        predicted = self.diffmodel(total_input, side_info, t, itp_info, cond_mask)
+
         target_mask = observed_mask - cond_mask
         residual = (noise - predicted) * target_mask
         num_eval = target_mask.sum()
@@ -160,7 +166,7 @@ class PriSTI(nn.Module):
             imputed_samples[:, i] = current_sample.detach()
         return imputed_samples
 
-    def forward(self, adj, batch, is_train=1):
+    def forward(self, batch, is_train=1):
         (
             observed_data,
             observed_mask,
@@ -170,15 +176,20 @@ class PriSTI(nn.Module):
             _,
             coeffs,
             cond_mask,
+            
+            shuffled_data,
+            shuffled_mask,
+            _,
+            _,
         ) = self.process_data(batch)
 
-        side_info = self.get_side_info(observed_tp, cond_mask)
+        side_info = self.get_side_info(observed_tp, cond_mask, shuffled_data, shuffled_mask)
         itp_info = None
         if self.use_guide:
             itp_info = coeffs.unsqueeze(1)
 
         loss_func = self.calc_loss if is_train == 1 else self.calc_loss_valid
-        output = loss_func(adj, observed_data, cond_mask, observed_mask, side_info, itp_info, is_train)
+        output = loss_func(observed_data, cond_mask, observed_mask, side_info, itp_info, is_train)
         return output
 
     def evaluate(self, batch, n_samples):
@@ -191,13 +202,18 @@ class PriSTI(nn.Module):
             cut_length,
             coeffs,
             _,
+            
+            _, # 不能看见未知部分
+            _,
+            shuffled_data,
+            shuffled_mask,
         ) = self.process_data(batch)
 
         with torch.no_grad():
             cond_mask = gt_mask
             target_mask = observed_mask - cond_mask
 
-            side_info = self.get_side_info(observed_tp, cond_mask)
+            side_info = self.get_side_info(observed_tp, cond_mask, shuffled_data, shuffled_mask)
             itp_info = None
             if self.use_guide:
                 itp_info = coeffs.unsqueeze(1)
@@ -209,7 +225,61 @@ class PriSTI(nn.Module):
         return samples, observed_data, target_mask, observed_mask, observed_tp
 
 
+
+
 class PriSTI_aqi36(PriSTI):
+    def __init__(self, config, device, target_dim=36, seq_len=24):
+        super(PriSTI_aqi36, self).__init__(target_dim, seq_len, config, device)
+        self.config = config
+
+    def process_data(self, batch):
+        observed_data = batch["observed_data"].to(self.device).float()
+        observed_mask = batch["observed_mask"].to(self.device).float()
+        observed_tp = batch["timepoints"].to(self.device).float()
+        gt_mask = batch["gt_mask"].to(self.device).float()
+        cut_length = batch["cut_length"].to(self.device).long()
+        for_pattern_mask = batch["hist_mask"].to(self.device).float()
+        coeffs = None
+        
+        shuffled_data = batch["shuffled_data"].to(self.device).float() # 添加
+        shuffled_mask = batch["shuffled_mask"].to(self.device).float()
+        missing_shuffled_data = batch["missing_shuffled_data"].to(self.device).float() # 添加
+        missing_shuffled_mask = batch["missing_shuffled_mask"].to(self.device).float()
+        
+        if self.config['model']['use_guide']:
+            coeffs = batch["coeffs"].to(self.device).float()
+        cond_mask = batch["cond_mask"].to(self.device).float()
+
+        observed_data = observed_data.permute(0, 2, 1)  # [B, K, L]
+        observed_mask = observed_mask.permute(0, 2, 1)
+        
+        gt_mask = gt_mask.permute(0, 2, 1)
+        for_pattern_mask = for_pattern_mask.permute(0, 2, 1)
+        cond_mask = cond_mask.permute(0, 2, 1)
+        
+        shuffled_data = shuffled_data.permute(0, 2, 1)  # [B, K, L]
+        shuffled_mask = shuffled_mask.permute(0, 2, 1)
+
+        if self.config['model']['use_guide']:
+            coeffs = coeffs.permute(0, 2, 1)
+
+        return (
+            observed_data,
+            observed_mask,
+            observed_tp,
+            gt_mask,
+            for_pattern_mask,
+            cut_length,
+            coeffs,
+            cond_mask,
+            
+            shuffled_data,
+            shuffled_mask,
+            missing_shuffled_data, 
+            missing_shuffled_mask,
+        )
+
+class PriSTI_aqi36_yuan(PriSTI):
     def __init__(self, config, device, target_dim=36, seq_len=36):
         super(PriSTI_aqi36, self).__init__(target_dim, seq_len, config, device)
         self.config = config
@@ -222,12 +292,14 @@ class PriSTI_aqi36(PriSTI):
         cut_length = batch["cut_length"].to(self.device).long()
         for_pattern_mask = batch["hist_mask"].to(self.device).float()
         coeffs = None
+        
         if self.config['model']['use_guide']:
             coeffs = batch["coeffs"].to(self.device).float()
         cond_mask = batch["cond_mask"].to(self.device).float()
 
         observed_data = observed_data.permute(0, 2, 1)  # [B, K, L]
         observed_mask = observed_mask.permute(0, 2, 1)
+        
         gt_mask = gt_mask.permute(0, 2, 1)
         for_pattern_mask = for_pattern_mask.permute(0, 2, 1)
         cond_mask = cond_mask.permute(0, 2, 1)
@@ -245,8 +317,6 @@ class PriSTI_aqi36(PriSTI):
             coeffs,
             cond_mask,
         )
-
-
 
 class PriSTI_MetrLA(PriSTI):
     def __init__(self, config, device, target_dim=207, seq_len=24):
