@@ -1,0 +1,64 @@
+# 忽略所有 .npy 文件（NumPy 数组文件）
+*.npy
+
+# 忽略所有 .txt 文件
+*.txt
+
+# 忽略特定目录下的文件
+data/**/*.npy
+data/**/*.txt
+
+# 如果需要保留某些重要的 txt 文件，可以用 ! 来排除
+# !README.txt
+# !requirements.txt
+
+# 其他常见的大文件类型
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.csv
+*.json
+*.parquet
+
+# 模型文件
+*.model
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# 数据文件夹
+data/
+datasets/
+models/
+checkpoints/
+
+# 临时文件
+*.tmp
+*.temp
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python 相关
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/

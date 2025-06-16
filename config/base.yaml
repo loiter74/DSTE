@@ -1,31 +1,52 @@
 
 #type: args
 
-train:
-  epochs: 200
-  batch_size: 64
-  lr: 1.0e-3
-  valid_epoch_interval: 5
-  is_lr_decay: true
 
-diffusion:
-  layers: 4
-  channels: 32    #
-  nheads: 8
-  diffusion_embedding_dim: 128
-  beta_start: 0.0001
-  beta_end: 0.2
-  num_steps: 100
-  schedule: "quad"
-  is_adp: true
-  proj_t: 16
-  is_cross_t: true
-  is_cross_s: true
+configNP:
 
-model:
+  input_dim: 1
+  covariate_dim: 7
+  
+  tcn_channels: [16, 32, 64, 128]
+  latent_channels: [16, 32, 64, 128]
+  emd_channel: 128
+  num_latent_layers: 2
+  observation_hidden_dim: 128
+  num_observation_layers: 2
+  tcn_kernel_size: 3
+  dropout: 0.1
+
+configCSDI:
   is_unconditional: 0
   timeemb: 128
   featureemb: 16
-  target_strategy: "hybrid"
-  use_guide: true
-  mask_sensor: []
+  target_strategy: "random"
+
+  side_dim: 1
+
+  layers: 3
+  channels: 64
+  nheads: 8
+  diffusion_embedding_dim: 128
+  beta_start: 0.0001
+  beta_end: 0.5
+  num_steps: 50
+  schedule: "quad"
+  is_linear: True
+
+
+  ddim_sampling: False
+  ddim_eta: 0.0
+  ddim_steps: 50
+  ddim_discr: "uniform"
+
+  train:
+    epochs: 50
+    batch_size: 16
+    lr: 1.0e-3
+    itr_per_epoch: 1.0e+8
+
+configLinear:
+  input_dim: 1
+  hidden_channel : 256
+
