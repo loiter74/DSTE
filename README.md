@@ -5,11 +5,10 @@
 - PyTorch >= 1.8
 - numpy, pandas, scikit-learn, tqdm, pyyaml
 
-安装依赖：
+## 安装依赖：
 ```bash
 pip install torch numpy pandas scikit-learn tqdm pyyaml
-
----
+```
 
 ## 数据准备 / Data Preparation
 
