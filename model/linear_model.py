@@ -8,8 +8,6 @@ import torch
 import torch.nn as nn
 from torch.nn import Conv1d
 
-from model.contrast.lstm import getLSTM
-from model.contrast.multitcn import MultiTConv1d
 from model.inner.st_module.net_module import Conv1d_with_init
 from model.inner.st_module.graph_layer import DynamicAgg, StaticAgg
 
@@ -87,3 +85,11 @@ class ImLinearBase(nn.Module):
             reg_loss += torch.norm(param, p=2)  # L2正则
 
         return mse_loss, mse_loss, reg_loss  # 调节0.01为合适系数+ 0.001 * reg_loss
+
+def getLSTM(input_size, hidden_size, bidirectional):
+    return nn.LSTM(input_size= input_size,
+                                    hidden_size=hidden_size,
+                                    num_layers=4,
+                                    batch_first=True,
+                                    dropout=0.1,
+                                    bidirectional=bidirectional)

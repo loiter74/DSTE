@@ -1,9 +1,6 @@
-import math
-
 import torch
-from sklearn.metrics.pairwise import haversine_distances
-from model.inner.diff_emb import DiffusionEmbedding
-from model.inner.st_module.net_module import Conv1d_with_init, get_torch_trans
+from model.inner.st_module.diff_emb import DiffusionEmbedding
+from model.inner.st_module.net_module import Conv1d_with_init
 
 import copy
 import torch.nn as nn

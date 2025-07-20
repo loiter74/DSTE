@@ -7,7 +7,7 @@ Created on Wed Nov  1 22:32:20 2023
 import torch
 import torch.nn as nn
 
-from model.contrast.multitcn import MultiTConv1d
+from model.inner.st_module.multitcn import MultiTConv1d
 from model.inner.st_module.net_module import Conv1d_with_init
 
 

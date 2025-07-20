@@ -4,7 +4,6 @@ import torch.nn as nn
 from torch.distributions import kl_divergence
 
 from model.contrast.csdi import CSDI
-from model.contrast.dsti import DSTI
 from model.inner.st_module.graph_layer import StaticAgg, DynamicAgg
 from model.np_model import NeuralProcessBase
 from utils import generate_missing_mask

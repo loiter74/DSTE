@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from model.inner.st_module.net_module import Conv1d_with_init
 from model.inner.st_module.graph_layer import GraphAggregation
-from model.inner.st_module.time_layer import TemporalLearning, TConv1d
+from model.inner.st_module.time_layer import  TConv1d
 
 
 class Deterministic(nn.Module):

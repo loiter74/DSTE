@@ -178,7 +178,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=42, help='random seed for initialization')
     parser.add_argument('--nsample', type=int, default=10)
 
-    parser.add_argument("--missing_ratio", type=float, default=0.3, help="missing ratio")
+    parser.add_argument("--missing_ratio", type=float, default=1.0, help="missing ratio")
 
 
     opt = parser.parse_args()
@@ -191,11 +191,6 @@ if __name__ == "__main__":
     opt.mean = mean
     opt.var = var
     torch.manual_seed(opt.seed)
-
-
-    # TODO: 加载预训练的 DSTE（im_diff 版本）状态字典 预训练
-    # TODO: 创建 DSTE 模型并转移权重
-
 
     np_pretrained = "save/np/BJAir2017/PM25/model_202505182244.pth"
     # 阶段1：预训练神经过程模块

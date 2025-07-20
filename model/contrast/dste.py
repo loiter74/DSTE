@@ -1,8 +1,7 @@
-import torch
 from torch import nn
 
 from model.inner.deter_layer import Deterministic
-from model.inner.diff_emb import DiffusionEmbedding
+from model.inner.st_module.diff_emb import DiffusionEmbedding
 from model.inner.inference_layer import InferenceModel
 from model.inner.st_module.graph_layer import DynamicAgg, StaticAgg
 from model.inner.st_module.net_module import  MultiConv1d, Attn_tem
