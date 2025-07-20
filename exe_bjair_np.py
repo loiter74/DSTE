@@ -132,6 +132,9 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=0.0005)
     parser.add_argument('--seed', type=int, default=42, help='random seed for initialization')
 
+    # 添加测试阶段参数
+    parser.add_argument("--test_phase", type=str, default="all", help="Test phase: 'in', 'out', 'LD_out', or 'all'")
+
     opt = parser.parse_args()
     path = "config/" + opt.config
     with open(path, "r") as f:
@@ -141,7 +144,7 @@ if __name__ == "__main__":
     train_loader, valid_loader, test_loader, scale, mean, var = get_dataloader(opt)
     torch.manual_seed(opt.seed)
 
-    save_dir = "save/np/"  + opt.dataset_name + "/" + opt.pred_attr + "/"
+    save_dir = "save/np/" + opt.dataset_name + "/" + opt.pred_attr + "/"
     np_model = NeuralProcessBase(config).to(opt.device)
     description = None
     if opt.model_path and os.path.exists(save_dir):
@@ -169,9 +172,25 @@ if __name__ == "__main__":
             print(f"created file {save_dir}")
         torch.save(np_model.state_dict(), save_dir + "model_" + current_datetime + description + ".pth")
 
-    print("分布内")
-    y_pred, label, mask = validate(np_model, valid_loader, opt)
-    get_info(opt, y_pred, label, mask, None)
+    # 根据 test_phase 参数进行测试
+    if opt.test_phase in ["in", "all"]:
+        print("分布内")
+        y_pred, label, mask = validate(np_model, valid_loader, opt)
+        get_info(opt, y_pred, label, mask, None)
+
+    if opt.test_phase in ["out", "all"]:
+        print("分布外")
+        y_pred, label, mask = validate(np_model, test_loader, opt)
+        get_info(opt, y_pred, label, mask, None)
+
+    if opt.test_phase in ["LD_out", "all"]:
+        from data.dataset_London import get_dataloader
+        _, _, test_loader = get_dataloader(opt)
+
+        print("LD分布外")
+        y_pred, label, mask = validate(np_model, test_loader, opt)
+        get_info(opt, y_pred, label, mask, None)
+
 
 
     print("分布外")
