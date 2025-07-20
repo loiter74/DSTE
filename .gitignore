@@ -20,6 +20,8 @@ data/**/*.txt
 *.csv
 *.json
 *.parquet
+*.xlsx
+
 
 # 模型文件
 *.model
@@ -32,6 +34,7 @@ data/**/*.txt
 *.tmp
 *.temp
 *~
+&.old
 
 # 系统文件
 .DS_Store
