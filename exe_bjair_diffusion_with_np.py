@@ -119,8 +119,8 @@ def validate(model, val_loader, opt):
 
     pred_samples = []
     with torch.no_grad():
-        with tqdm(val_loader, unit="batch", desc="Validation") as pbar:
-            for batch_idx, batch in enumerate(pbar):
+
+            for batch_idx, batch in enumerate(val_loader):
                 # 数据预处理
                 pred_context = batch['pred_context'].permute(0, 1, 3, 2).to(opt.device)
                 side_context = batch['feat_context'].permute(0, 1, 3, 2).to(opt.device)
@@ -147,8 +147,6 @@ def validate(model, val_loader, opt):
 
                 if batch_idx > 0: break
     return y_pred, label, mask, mask_imputes, pred_samples
-
-
 if __name__ == "__main__":
 
     current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M")

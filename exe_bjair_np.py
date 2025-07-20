@@ -82,36 +82,6 @@ def train(model, optimizer, train_loader, opt, epoch):
 
         return total_loss / len(train_loader)
 
-def validate(model, val_loader, opt):
-    model.eval()
-
-    y_pred = []
-    label = []
-    mask = []
-
-    with torch.no_grad():
-        with tqdm(val_loader, unit="batch", desc="Validation") as pbar:
-            for batch_idx, batch in enumerate(pbar):
-                # 数据预处理
-                pred_context = batch['pred_context'].permute(0, 1, 3, 2).to(opt.device)
-                side_context = batch['feat_context'].permute(0, 1, 3, 2).to(opt.device)
-                pred_target = batch['pred_target'].permute(0, 1, 3, 2).to(opt.device)
-                side_target = batch['feat_target'].permute(0, 1, 3, 2).to(opt.device)
-                A = batch['adj_tc'].to(opt.device)
-                context_missing = batch['missing_mask_context'].squeeze(-1).permute(0, 2, 1).to(opt.device)
-                target_missing = batch['missing_mask_target'].squeeze(-1).permute(0, 2, 1).to(opt.device)
-
-                # 前向计算
-                pred_mu, pred_var, q_dists, p_dists = model(
-                    side_context, pred_context,
-                    side_target, None,
-                    A, context_missing
-                )
-                y_pred.append(pred_mu)
-                label.append(torch.tensor(pred_target))
-                mask.append(torch.tensor(target_missing).permute(0,2,1).unsqueeze(2))
-
-    return y_pred, label, mask
 
 if __name__ == "__main__":
 
@@ -131,9 +101,6 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=20)
     parser.add_argument('--lr', type=float, default=0.0005)
     parser.add_argument('--seed', type=int, default=42, help='random seed for initialization')
-
-    # 添加测试阶段参数
-    parser.add_argument("--test_phase", type=str, default="all", help="Test phase: 'in', 'out', 'LD_out', or 'all'")
 
     opt = parser.parse_args()
     path = "config/" + opt.config
@@ -172,36 +139,6 @@ if __name__ == "__main__":
             print(f"created file {save_dir}")
         torch.save(np_model.state_dict(), save_dir + "model_" + current_datetime + description + ".pth")
 
-    # 根据 test_phase 参数进行测试
-    if opt.test_phase in ["in", "all"]:
-        print("分布内")
-        y_pred, label, mask = validate(np_model, valid_loader, opt)
-        get_info(opt, y_pred, label, mask, None)
 
-    if opt.test_phase in ["out", "all"]:
-        print("分布外")
-        y_pred, label, mask = validate(np_model, test_loader, opt)
-        get_info(opt, y_pred, label, mask, None)
-
-    if opt.test_phase in ["LD_out", "all"]:
-        from data.dataset_London import get_dataloader
-        _, _, test_loader = get_dataloader(opt)
-
-        print("LD分布外")
-        y_pred, label, mask = validate(np_model, test_loader, opt)
-        get_info(opt, y_pred, label, mask, None)
-
-
-
-    print("分布外")
-    y_pred, label, mask = validate(np_model, test_loader, opt)
-    get_info(opt, y_pred, label, mask, None)
-    from data.dataset_London import get_dataloader
-    _, _, test_loader = get_dataloader(opt)
-
-    print("LD分布外")
-    y_pred, label, mask = validate(np_model, test_loader, opt)
-
-    get_info(opt, y_pred, label, mask, None)
 
 
