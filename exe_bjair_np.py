@@ -5,8 +5,7 @@ Created on Wed Oct 11 15:06:28 2023
 @author: LUN076
 """
 from data.dataset_factory import get_dataloader
-# from data.dataset_BJAir2017 import get_dataloader
-#from data.dataset_PEMS03_small import get_dataloader
+
 
 import torch
 from tqdm import tqdm
@@ -142,8 +141,6 @@ if __name__ == "__main__":
     train_loader, valid_loader, test_loader, scale, mean, var = get_dataloader(opt)
     torch.manual_seed(opt.seed)
 
-    # TODO: 加载预训练的 DSTE（im_diff 版本）状态字典 预训练
-    # TODO: 创建 DSTE 模型并转移权重
     save_dir = "save/np/"  + opt.dataset_name + "/" + opt.pred_attr + "/"
     np_model = NeuralProcessBase(config).to(opt.device)
     description = None

@@ -121,15 +121,6 @@ def validate(model, val_loader, opt):
     with torch.no_grad():
         with tqdm(val_loader, unit="batch", desc="Validation") as pbar:
             for batch_idx, batch in enumerate(pbar):
-                # 数据预处理（与训练保持完全一致）
-                # pred_context = batch['pred_context'].transpose(2, 3).to(opt.device).float()
-                # side_context = batch['feat_context'].transpose(2, 3).to(opt.device).float()
-                # pred_target = batch['pred_target'].transpose(2, 3).to(opt.device).float()
-                # side_target = batch['feat_target'].transpose(2, 3).to(opt.device).float()
-                # A = batch['adj_tc'].to(opt.device).float()
-                # context_missing = batch['missing_mask_context'].transpose(1, 2).to(opt.device).float()
-                # target_missing = batch['missing_mask_target'].transpose(1, 2).to(opt.device).float()
-
                 # 数据预处理
                 pred_context = batch['pred_context'].permute(0, 1, 3, 2).to(opt.device)
                 side_context = batch['feat_context'].permute(0, 1, 3, 2).to(opt.device)
