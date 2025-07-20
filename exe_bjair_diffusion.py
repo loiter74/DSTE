@@ -4,11 +4,9 @@ Created on Wed Oct 11 15:06:28 2023
 
 @author: LUN076
 """
-from urllib3.filepost import writer
 
 from model.diffusion_model import DiffusionBase
 from data.dataset_factory import get_dataloader
-# from data.dataset_PEMS03_small import get_dataloader
 import torch
 from tqdm import tqdm
 import yaml
@@ -16,7 +14,6 @@ import argparse
 import datetime
 import os
 from utils import get_info, _quantile_CRPS_with_missing
-from tensorboardX import SummaryWriter
 
 def train(model, optimizer, train_loader, opt, epoch, writer=None):
     """
@@ -92,10 +89,11 @@ def train(model, optimizer, train_loader, opt, epoch, writer=None):
                 'nl': f"{avg_nll_loss:.2f}",
             })
 
-            writer.add_scalar("avg_diff_loss", avg_diff_loss, epoch)
-            writer.add_scalar("avg_loss", avg_loss, epoch)
-            writer.add_scalar("avg_nll_loss", avg_nll_loss, epoch)
-            writer.add_scalar("avg_kl_loss", avg_kl_loss, epoch)
+            if writer is not None:
+                writer.add_scalar("avg_diff_loss", avg_diff_loss, epoch)
+                writer.add_scalar("avg_loss", avg_loss, epoch)
+                writer.add_scalar("avg_nll_loss", avg_nll_loss, epoch)
+                writer.add_scalar("avg_kl_loss", avg_kl_loss, epoch)
 
     return total_loss / len(train_loader)
 
@@ -165,7 +163,7 @@ if __name__ == "__main__":
     current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M")
     parser = argparse.ArgumentParser(description="DSTE")
     parser.add_argument("--config", type=str, default="base.yaml")
-    parser.add_argument("--model_path", type=str, default="", help="current_datetime")
+    parser.add_argument("--model_path", type=str, default="model_202505181849.pth", help="current_datetime")
     
     parser.add_argument('--pred_attr', type=str, default="PM25" ,  help='Which AQ attribute to infer')
     parser.add_argument('--t_len', type=int, default=24, help='time window for inference')
@@ -195,9 +193,6 @@ if __name__ == "__main__":
     torch.manual_seed(opt.seed)
 
 
-    # The log directory will be something like 'runs/Aug20-17-20-33-resnet'
-    summary_writer = SummaryWriter(comment='first_use')
-
     # TODO: 加载预训练的 DSTE（im_diff 版本）状态字典 预训练
     # TODO: 创建 DSTE 模型并转移权重
 
@@ -207,8 +202,6 @@ if __name__ == "__main__":
     diffusion_model = DiffusionBase(config, opt.device, np_pretrained_dir=np_pretrained).to(opt.device)
     # 检查是否提供了模型路径
     save_dir = "save/ddpm/" + opt.dataset_name + "/" + opt.pred_attr + "/"
-
-    #summary_writer.add_graph(diffusion_model.diff_model)
 
     description = ""
     print(opt)
@@ -233,7 +226,6 @@ if __name__ == "__main__":
                 train_loader=train_loader,
                 opt=opt,
                 epoch=epoch,
-                writer=summary_writer
             )
 
         if not os.path.exists(save_dir):
