@@ -27,11 +27,11 @@ pip install torch numpy pandas scikit-learn tqdm pyyaml
   python exe_bjair_np.py --pred_attr PM25 --epochs 20
 ```
 #### **参数说明**
-- `--config`：配置文件路径，默认为 base.yaml。
-- `--pred_attr`：预测的空气质量属性，例如 PM25。
-- `--batch_size`：训练时的批量大小，默认为 32。
-- `--epochs`：训练的轮数，默认为 20。
-- `--device`：训练设备，例如 cuda:0 或 cpu。
+- `--config`：配置文件路径，默认为 base.yaml
+- `--pred_attr`：预测的空气质量属性，例如 PM25
+- `--batch_size`：训练时的批量大小，默认为 32
+- `--epochs`：训练的轮数，默认为 20
+- `--device`：训练设备，例如 cuda:0 或 cpu
 #### **输出**
 
 训练完成后，权重文件会保存在 `save/np/` 目录中，文件名格式为：`model_YYYYMMDDHHMM.pth`。
@@ -59,10 +59,10 @@ python exe_bjair_diffusion_with_np.py --config base.yaml --pred_attr PM25 --np_m
 ```
 #### **参数说明**参数说明
 - `--test_phase`：测试阶段，支持以下选项：
-    - in：测试分布内数据。
-    - out：测试分布外数据。
-    - LD_out：测试 LD 分布外数据。
-    - all：同时测试所有类型数据。
+    - in：测试分布内数据
+    - out：测试分布外数据
+    - LD_out：测试 LD 分布外数据
+    - all：同时测试所有类型数据
 
 ## 目录结构 
 ```
