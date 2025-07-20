@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.nn import Conv1d
 
-from model.inner.st_module.net_module import Conv1d_with_init
+from model.inner.st_module.conv_layer import Conv1d_with_init
 from model.inner.st_module.graph_layer import DynamicAgg, StaticAgg
 
 

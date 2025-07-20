@@ -1,6 +1,6 @@
 import torch
-from model.inner.st_module.diff_emb import DiffusionEmbedding
-from model.inner.st_module.net_module import Conv1d_with_init
+from model.inner.st_module.diff_emb_layer import DiffusionEmbedding
+from model.inner.st_module.conv_layer import Conv1d_with_init
 
 import copy
 import torch.nn as nn

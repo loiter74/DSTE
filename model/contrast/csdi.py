@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from linear_attention_transformer import LinearAttentionTransformer
 
-from model.inner.st_module.diff_emb import DiffusionEmbedding
+from model.inner.st_module.diff_emb_layer import DiffusionEmbedding
 from model.inner.st_module.spatial_layer import SpaLearning
 
 

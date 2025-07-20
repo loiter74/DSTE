@@ -7,9 +7,8 @@ Created on Wed Nov  1 22:32:20 2023
 import torch
 import torch.nn as nn
 
-from model.inner.st_module.multitcn import MultiTConv1d
-from model.inner.st_module.net_module import Conv1d_with_init
-
+from model.inner.st_module.time_layer import MultiTConv1d
+from model.inner.st_module.conv_layer import Conv1d_with_init
 
 class DynamicAgg(nn.Module):
     def __init__(self, pred_in=1, feat_in=7, channels=64, out=64 ,dropout=0.1):

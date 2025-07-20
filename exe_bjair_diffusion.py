@@ -5,7 +5,7 @@ Created on Wed Oct 11 15:06:28 2023
 @author: LUN076
 """
 
-from model.diffusion_model import DiffusionBase
+from model.diffusion_model_with_np import DiffusionBase
 from data.dataset_factory import get_dataloader
 import torch
 from tqdm import tqdm
@@ -163,8 +163,8 @@ if __name__ == "__main__":
     current_datetime = datetime.datetime.now().strftime("%Y%m%d%H%M")
     parser = argparse.ArgumentParser(description="DSTE")
     parser.add_argument("--config", type=str, default="base.yaml")
-    parser.add_argument("--model_path", type=str, default="model_202505181849.pth", help="current_datetime")
-    
+    parser.add_argument("--model_path", type=str, default="", help="current_datetime")
+    # model_202505181849.pth
     parser.add_argument('--pred_attr', type=str, default="PM25" ,  help='Which AQ attribute to infer')
     parser.add_argument('--t_len', type=int, default=24, help='time window for inference')
     parser.add_argument('--batch_size', type=int, default=64, help='input batch size')

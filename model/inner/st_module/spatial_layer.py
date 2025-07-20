@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
-from model.inner.st_module.net_module import Conv1d_with_init
+from model.inner.st_module.conv_layer import Conv1d_with_init
 
 
 def default(val, default_val):
