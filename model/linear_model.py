@@ -58,9 +58,6 @@ class ImLinearBase(nn.Module):
 
         return y
 
-#mae:  tensor(11.3390) 有grap 100ep
-# rmse:  tensor(18.9972)
-# mape:  tensor(0.3127)
     def compute_loss(self, pred, target, mask):
 
         valid_index = mask.permute(0, 2, 1).unsqueeze(2)
