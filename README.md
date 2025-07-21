@@ -43,7 +43,7 @@ Run `exe_bjair_diffusion_with_np.py` to complete the training of the diffusion m
 
 #### **Command**
 ```bash
-python exe_bjair_diffusion_with_np.py --pred_attr PM25 --np_model_path [Path to the previously trained np_model] --epochs 30
+python exe_bjair_diffusion_with_np.py --pred_attr PM25 --np_model_path [Path to the previously trained np_model] --epochs 50
 ```
 #### **Parameter Description**
 - `--np_model_path`: Path to the pre-trained neural process model, please provide the weight file path saved in step 1.
